@@ -3,12 +3,13 @@ import Text.Pandoc
 -- Getting the contents
 import Control.Monad(forM)
 import System.Directory (doesDirectoryExist, getDirectoryContents)
-import System.FilePath ((</>), takeExtension)
+import System.FilePath ((</>), takeExtension, replaceExtension)
 import System.IO(writeFile)
 -- Access to the command line commands, Want to try and do it the haskell way, 
 -- a lot easier this way for now
 import System.Cmd
 import System.Exit
+
 
 --Copies a directory to a destination from system command, somewhat dangerous (constants added)
 --"Out" folder must exist
@@ -20,6 +21,7 @@ getMarkdownPreset :: IO [FilePath]
 getMarkdownPreset = getMarkdown "/Users/james/Dropbox/Projects/Site/Studio/Out/"
 
 --Finds all the files in a directory and filters out the markdown files
+--Need support for .md files
 getMarkdown :: FilePath -> IO [FilePath]
 getMarkdown topdir = do
   names <- getDirectoryContents topdir
@@ -34,31 +36,40 @@ getMarkdown topdir = do
   return mdPaths
 
 --Takes a markdown file and writes a html file, same name in same dir
+--"Out" must exist with a template file
 convertMdtoHtml :: FilePath -> IO () 
 convertMdtoHtml file = do
   contents <- readFile file 
   let pandoc = readMarkdown def contents
   template <- readFile "/Users/james/Dropbox/Projects/Site/Studio/In/template.html" 
   let html = writeHtmlString (siteOptions template) pandoc
-  writeFile (file ++ ".html") html
+  writeFile (replaceExtension file ".html") html
 
-convertArticles :: IO ()
-convertArticles = undefined
+{- Testing -}
+convertMdPandoc :: IO () 
+convertMdPandoc = do 
+  contents <- readFile "/Users/james/Dropbox/Projects/Site/Studio/In/test.html"
+  putStrLn ( show (readMarkdown def contents))
+
+--Read the file create a pandoc
+--convertMdPandoc :: String -> Pandoc
+--convertMdPandoc = readMarkdown def 
+
+--Add a new file for the toc
+--Pandoc has a BulletList [[Block]]
+toc :: Pandoc
+toc = Pandoc (Meta [][][]) [Plain [Str "Hello"]]
+
+createToc :: [Pandoc] -> Pandoc 
+createToc = undefined
+
+--Wrap a template around everything 
+convertPandocHtml :: Pandoc -> String
+convertPandocHtml = undefined
+
+compile :: IO ()
+compile = undefined 
 
 --Site Options with all default except following
 siteOptions :: String -> WriterOptions
 siteOptions template = def { writerStandalone = True, writerTemplate = template }
-
-{-
-  Copy Folder to new location
-  Convert markdown to html
-  Create main page
-
-  Personal Blog Static Site Generator
-
-  Testing
-    Add new fonts
-    Have external image site ready
--}
-
-
