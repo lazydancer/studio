@@ -21,7 +21,6 @@ getMarkdownPreset :: IO [FilePath]
 getMarkdownPreset = getMarkdown "/Users/james/Dropbox/Projects/Site/Studio/Out/"
 
 --Finds all the files in a directory and filters out the markdown files
---Need support for .md files
 getMarkdown :: FilePath -> IO [FilePath]
 getMarkdown topdir = do
   names <- getDirectoryContents topdir
@@ -37,6 +36,7 @@ getMarkdown topdir = do
 
 --Takes a markdown file and writes a html file, same name in same dir
 --"Out" must exist with a template file
+--Quick way to convert, without worrying about the TOC
 convertMdtoHtml :: FilePath -> IO () 
 convertMdtoHtml file = do
   contents <- readFile file 
@@ -45,30 +45,18 @@ convertMdtoHtml file = do
   let html = writeHtmlString (siteOptions template) pandoc
   writeFile (replaceExtension file ".html") html
 
-{- Testing -}
-convertMdPandoc :: IO () 
-convertMdPandoc = do 
-  contents <- readFile "/Users/james/Dropbox/Projects/Site/Studio/In/test.html"
-  putStrLn ( show (readMarkdown def contents))
+--This will take the pandocs for all the articles and make a list that will be
+--put into a bulleted list
+--TODO: Find out what I need to list to be formated like
+--[Plain [Str "March",Space,Str "29,",Space,Str "2013",Link [Str "Bitcoin"] ("/2012/bitcoin","")]]
+--Should be able to get the date from the Pandoc instead of the filePath,
+--two different ways to find the same thing I will have to fix
+a :: [Pandoc] -> [[Block]]
+a = undefined
 
---Read the file create a pandoc
---convertMdPandoc :: String -> Pandoc
---convertMdPandoc = readMarkdown def 
-
---Add a new file for the toc
 --Pandoc has a BulletList [[Block]]
 toc :: Pandoc
-toc = Pandoc (Meta [][][]) [Plain [Str "Hello"]]
-
-createToc :: [Pandoc] -> Pandoc 
-createToc = undefined
-
---Wrap a template around everything 
-convertPandocHtml :: Pandoc -> String
-convertPandocHtml = undefined
-
-compile :: IO ()
-compile = undefined 
+toc = Pandoc (Meta [Str "James Pucula"][][]) [BulletList [[Plain [Str "Hello"]],[Plain [Str "Another One"]]]]
 
 --Site Options with all default except following
 siteOptions :: String -> WriterOptions
