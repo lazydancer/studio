@@ -10,6 +10,12 @@ import System.IO(writeFile)
 import System.Cmd
 import System.Exit
 
+main :: IO ()
+main = do
+  copyDir
+  mdFiles <- getMarkdownPreset
+  mapM_ convertMdtoHtml mdFiles
+
 
 --Copies a directory to a destination from system command, somewhat dangerous (constants added)
 --"Out" folder must exist
