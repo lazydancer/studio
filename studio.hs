@@ -57,8 +57,11 @@ convertMdtoHtml file = do
 --[Plain [Str "March",Space,Str "29,",Space,Str "2013",Link [Str "Bitcoin"] ("/2012/bitcoin","")]]
 --Should be able to get the date from the Pandoc instead of the filePath,
 --two different ways to find the same thing I will have to fix
+
 {-
-createTOC :: [Pandoc] -> [[Block]]
+Pandoc (Meta {docTitle = [Str "James",Space,Str "Pucula"], docAuthors = [], docDate = []}) [Para [Link [] ("/","")],BulletList [[Plain [Str "March",Space,Str "29,",Space,Str "2013",Link [Str "Bitcoin"] ("/2012/bitcoin","")]],[Plain [Str "April",Space,Str "10,",Space,Str "2013",Link [Str "A",Space,Str "longer",Space,Str "Title"] ("/2012/hello-world","")]],[Plain [Str "June",Space,Str "1,",Space,Str "2013",Link [Str "Shrt",Space,Str "Title"] ("/2012/hello-world","")]],[Plain [Str "January",Space,Str "2,",Space,Str "2013",Link [Str "Never",Space,Str "Runs",Space,Str "out",Space,Str "of",Space,Str "gas"] ("/2012/hello-world","")]]]]
+
+createTOC :: [Pandoc] -> [Block]
 createTOC articles = undefined
 
 addTOC :: Pandoc -> Block
@@ -67,6 +70,14 @@ addTOC pandoc = Plain [docDate, Link docTitle (pathTo,"")]
 --Pandoc has a BulletList [[Block]]
 toc :: Pandoc
 toc = Pandoc (Meta [Str "James Pucula"][][]) [BulletList [[Plain [Str "Hello"]],[Plain [Str "Another One"]]]]
+
+meta :: Pandoc -> Meta
+meta (Pandoc x _) = x
+
+str :: Str -> String
+str (Str x) = x
+
+show $ last $ docDate $ meta pan ==> "Str \"2013\"" 
 -}
 
 --Site Options with all default except following
