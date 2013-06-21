@@ -57,12 +57,17 @@ convertMdtoHtml file = do
 --[Plain [Str "March",Space,Str "29,",Space,Str "2013",Link [Str "Bitcoin"] ("/2012/bitcoin","")]]
 --Should be able to get the date from the Pandoc instead of the filePath,
 --two different ways to find the same thing I will have to fix
-a :: [Pandoc] -> [[Block]]
-a = undefined
+{-
+createTOC :: [Pandoc] -> [[Block]]
+createTOC articles = undefined
 
+addTOC :: Pandoc -> Block
+addTOC pandoc = Plain [docDate, Link docTitle (pathTo,"")] 
+  where pathTo = docDateYear ++ "/" ++ docTitle 
 --Pandoc has a BulletList [[Block]]
 toc :: Pandoc
 toc = Pandoc (Meta [Str "James Pucula"][][]) [BulletList [[Plain [Str "Hello"]],[Plain [Str "Another One"]]]]
+-}
 
 --Site Options with all default except following
 siteOptions :: String -> WriterOptions
