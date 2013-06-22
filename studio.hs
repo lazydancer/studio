@@ -2,7 +2,7 @@ import Text.Pandoc
 
 -- Getting the contents
 import Control.Monad(forM)
-import System.Directory (doesDirectoryExist, getDirectoryContents)
+import System.Directory (doesDirectoryExist, getDirectoryContents,createDirectoryIfMissing, setCurrentDirectory)
 import System.FilePath ((</>), takeExtension, replaceExtension)
 import System.IO(writeFile)
 -- Access to the command line commands, Want to try and do it the haskell way, 
@@ -10,35 +10,33 @@ import System.IO(writeFile)
 import System.Cmd
 import System.Exit
 
+
 main :: IO ()
 main = do
-  copyDir
-  mdFiles <- getMarkdownPreset
-  mapM_ convertMdtoHtml mdFiles
+  setCurrentDirectory "~/Dropbox/Projects/Site/Studio/"
+  createDirectoryIfMissing False "Output"
+  mdFiles <- getArticles
+  mapM mapFunc mdFiles --mapM :: Monad m => (a -> m b) -> [a] -> m [b] 
+  return ()
+
+getArticles :: IO [FilePath]
+getArticles = do
+  names <- getDirectoryContents "Articles"
+  return $ filter (`notElem` [".","..",".DS_Store"]) names
+
+--The block returned is information used for the TOC
+mapFunc :: String -> IO Block 
+mapFunc = undefined 
+  --Get Name
+  --Convert to Pandoc
+  --Get Pandoc meta docDate
+  --Get the year and use it it create a folder if missing
+  --Create file
+  --Return Block information used in TOC
 
 
---Copies a directory to a destination from system command, somewhat dangerous (constants added)
---"Out" folder must exist
-copyDir :: IO ExitCode
-copyDir = system $ "cp -r ~/Dropbox/Projects/Site/Studio/In/* ~/Dropbox/Projects/Site/Studio/Out/"
 
---;;;;;;Preset Markdown
-getMarkdownPreset :: IO [FilePath]
-getMarkdownPreset = getMarkdown "/Users/james/Dropbox/Projects/Site/Studio/Out/"
 
---Finds all the files in a directory and filters out the markdown files
-getMarkdown :: FilePath -> IO [FilePath]
-getMarkdown topdir = do
-  names <- getDirectoryContents topdir
-  let properNames = filter (`notElem` [".","..",".DS_Store"]) names
-  paths <- forM properNames $ \name -> do
-    let path = topdir </> name
-    isDirectory <- doesDirectoryExist path
-    if isDirectory
-      then getMarkdown path
-      else return [path]
-  let mdPaths = filter ((".markdown" ==)  . takeExtension)  (concat paths)
-  return mdPaths
 
 --Takes a markdown file and writes a html file, same name in same dir
 --"Out" must exist with a template file
@@ -47,7 +45,7 @@ convertMdtoHtml :: FilePath -> IO ()
 convertMdtoHtml file = do
   contents <- readFile file 
   let pandoc = readMarkdown def contents
-  template <- readFile "/Users/james/Dropbox/Projects/Site/Studio/In/template.html" 
+  template <- readFile "main.hs" 
   let html = writeHtmlString (siteOptions template) pandoc
   writeFile (replaceExtension file ".html") html
 
@@ -58,6 +56,7 @@ convertMdtoHtml file = do
 --Should be able to get the date from the Pandoc instead of the filePath,
 --two different ways to find the same thing I will have to fix
 
+--Title = URL = " " --> "-" lowercase
 {-
 Pandoc (Meta {docTitle = [Str "James",Space,Str "Pucula"], docAuthors = [], docDate = []}) [Para [Link [] ("/","")],BulletList [[Plain [Str "March",Space,Str "29,",Space,Str "2013",Link [Str "Bitcoin"] ("/2012/bitcoin","")]],[Plain [Str "April",Space,Str "10,",Space,Str "2013",Link [Str "A",Space,Str "longer",Space,Str "Title"] ("/2012/hello-world","")]],[Plain [Str "June",Space,Str "1,",Space,Str "2013",Link [Str "Shrt",Space,Str "Title"] ("/2012/hello-world","")]],[Plain [Str "January",Space,Str "2,",Space,Str "2013",Link [Str "Never",Space,Str "Runs",Space,Str "out",Space,Str "of",Space,Str "gas"] ("/2012/hello-world","")]]]]
 
@@ -74,10 +73,11 @@ toc = Pandoc (Meta [Str "James Pucula"][][]) [BulletList [[Plain [Str "Hello"]],
 meta :: Pandoc -> Meta
 meta (Pandoc x _) = x
 
+--I will need to write a converter to include Spaces
 str :: Str -> String
 str (Str x) = x
 
-show $ last $ docDate $ meta pan ==> "Str \"2013\"" 
+str $ last $ docDate $ meta pan ==> "2013" 
 -}
 
 --Site Options with all default except following
