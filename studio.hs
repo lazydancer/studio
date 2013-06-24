@@ -8,48 +8,48 @@ import System.IO(writeFile)
 
 main :: IO () 
 main = do
+  --init
   setCurrentDirectory "/Users/james/Dropbox/Projects/Site/Studio"
   createDirectoryIfMissing False "Output"
 
+  --Convert the articles
   mdFiles <- getArticles
   list <- mapM mapFunc mdFiles
-
+  
+  --Create TOC
   template <- readFile "template.html"
   let tocPan = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ [BulletList list] ++ [Plain [RawInline "html" "</div>"]]) 
   let html = writeHtmlString (siteOptions template) tocPan 
   writeFile "Output/index.html" html
-
+  
+  --Move supporting files over
   names <- getDirectoryContents "."
   let cpf = filter (flip elem [".css",".js",".png",".jpg"] . takeExtension) names
-  
   forM_ cpf (\x -> copyFile x ("Output/" ++ x))
-
-  return () 
 
 getArticles :: IO [FilePath]
 getArticles = do
   names <- getDirectoryContents "Articles"
   return $ filter (`notElem` [".","..",".DS_Store"]) names
 
---The block returned is information used for the TOC
+--returns information used for the TOC
 mapFunc :: FilePath -> IO [Block]
 mapFunc file = do 
-  --get the filename
   let fname = takeFileName file
-  --Convert to Pandoc
+  
   contents <- readFile ("Articles/" ++ file)
   let pandoc = readMarkdown def contents
-  --Get Pandoc meta docDate
+  
   let name = str $ head $ docTitle $ meta pandoc
   let date = docDate $ meta pandoc  
   let year = str $ last date
-  --Convert file
+ 
   template <- readFile "template.html"
   let html = writeHtmlString (siteOptions template) pandoc
-  --Create file
+  
   createDirectoryIfMissing True ("Output/" ++ year ++ "/" ++ dropExtension fname)
   writeFile ("Output/" ++ year ++ "/" ++ dropExtension fname ++ "/index.html") html
-  --Return Block information used in TOC
+  
   return [Plain 
             ([RawInline "html" "<span>"] ++ 
               date ++
