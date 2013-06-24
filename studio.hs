@@ -1,6 +1,7 @@
 import Text.Pandoc
 
-import System.Directory (doesDirectoryExist, getDirectoryContents,createDirectoryIfMissing, setCurrentDirectory)
+import Control.Monad (forM_)
+import System.Directory (doesDirectoryExist, getDirectoryContents,createDirectoryIfMissing, setCurrentDirectory, copyFile)
 import System.FilePath ((</>), takeExtension, replaceExtension, takeFileName, dropExtension)
 import System.IO(writeFile)
 
@@ -9,14 +10,21 @@ main :: IO ()
 main = do
   setCurrentDirectory "/Users/james/Dropbox/Projects/Site/Studio"
   createDirectoryIfMissing False "Output"
+
   mdFiles <- getArticles
-  list <- mapM mapFunc mdFiles --mapM :: Monad m => (a -> m b) -> [a] -> m [b] 
+  list <- mapM mapFunc mdFiles
 
   template <- readFile "template.html"
-  let html = writeHtmlString (siteOptions template) $ Pandoc (Meta {docTitle = [], docAuthors = [], docDate = []}) [(BulletList list)]
-  putStrLn html
+  let tocPan = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ [BulletList list] ++ [Plain [RawInline "html" "</div>"]]) 
+  let html = writeHtmlString (siteOptions template) tocPan 
+  writeFile "Output/index.html" html
 
-  return ()
+  names <- getDirectoryContents "."
+  let cpf = filter (flip elem [".css",".js",".png",".jpg"] . takeExtension) names
+  
+  forM_ cpf (\x -> copyFile x ("Output/" ++ x))
+
+  return () 
 
 getArticles :: IO [FilePath]
 getArticles = do
@@ -28,29 +36,31 @@ mapFunc :: FilePath -> IO [Block]
 mapFunc file = do 
   --get the filename
   let fname = takeFileName file
-  
   --Convert to Pandoc
   contents <- readFile ("Articles/" ++ file)
   let pandoc = readMarkdown def contents
-
   --Get Pandoc meta docDate
+  let name = str $ head $ docTitle $ meta pandoc
   let date = docDate $ meta pandoc  
   let year = str $ last date
-
   --Convert file
   template <- readFile "template.html"
   let html = writeHtmlString (siteOptions template) pandoc
-
   --Create file
-  createDirectoryIfMissing True ("Output/" ++ year ++ "/" ++ (dropExtension fname))
-  writeFile ("Output/" ++ year ++ "/" ++ (dropExtension fname) ++ "/index.html") html
-
+  createDirectoryIfMissing True ("Output/" ++ year ++ "/" ++ dropExtension fname)
+  writeFile ("Output/" ++ year ++ "/" ++ dropExtension fname ++ "/index.html") html
   --Return Block information used in TOC
-  return $ [Plain (date ++ [Link [Str fname] ("/" ++ year ++ "/" ++ (dropExtension fname),"")])]
+  return [Plain 
+            ([RawInline "html" "<span>"] ++ 
+              date ++
+                [RawInline "html" "</span>"] ++ 
+                  [Link [Str name] 
+                    ("/" ++ year ++ "/" ++ dropExtension fname,"")])]
 
 meta :: Pandoc -> Meta
 meta (Pandoc x _) = x
 
+--only support single words for now
 str :: Inline -> String
 str (Str x) = x
 
