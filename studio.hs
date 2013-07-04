@@ -5,7 +5,8 @@ import System.Directory (doesDirectoryExist, getDirectoryContents,createDirector
 import System.FilePath ((</>), takeExtension, replaceExtension, takeFileName, dropExtension)
 import System.IO(writeFile)
 
-
+--Have list do reverse chronilogical order
+--  I think the mapFunc has to much logic in it.
 main :: IO () 
 main = do
   --init
@@ -14,8 +15,9 @@ main = do
 
   --Convert the articles
   mdFiles <- getArticles
+--let mdFilesOrd = orderingOfmdFiles mdFiles //this is a possiblity
   list <- mapM mapFunc mdFiles
-  
+
   --Create TOC
   template <- readFile "template.html"
   let tocPan = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ [BulletList list] ++ [Plain [RawInline "html" "</div>"]]) 
