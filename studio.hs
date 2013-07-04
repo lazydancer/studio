@@ -5,8 +5,6 @@ import System.Directory (doesDirectoryExist, getDirectoryContents,createDirector
 import System.FilePath ((</>), takeExtension, replaceExtension, takeFileName, dropExtension)
 import System.IO(writeFile)
 
---Have list do reverse chronilogical order
---  I think the mapFunc has to much logic in it.
 main :: IO () 
 main = do
   --init
@@ -16,13 +14,16 @@ main = do
   --Convert the articles
   mdFiles <- getArticles
 --let mdFilesOrd = orderingOfmdFiles mdFiles //this is a possiblity
-  list <- mapM mapFunc mdFiles
+  mapM_ writeArticle mdFiles
 
+  writeTOC mdFiles
+{-
   --Create TOC
   template <- readFile "template.html"
   let tocPan = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ [BulletList list] ++ [Plain [RawInline "html" "</div>"]]) 
   let html = writeHtmlString (siteOptions template) tocPan 
   writeFile "Output/index.html" html
+-}
   
   --Move supporting files over
   names <- getDirectoryContents "."
@@ -34,9 +35,9 @@ getArticles = do
   names <- getDirectoryContents "Articles"
   return $ filter (`notElem` [".","..",".DS_Store"]) names
 
---returns information used for the TOC
-mapFunc :: FilePath -> IO [Block]
-mapFunc file = do 
+--Converts and creates the articles
+writeArticle :: FilePath -> IO ()
+writeArticle file = do 
   let fname = takeFileName file
   
   contents <- readFile ("Articles/" ++ file)
@@ -51,13 +52,38 @@ mapFunc file = do
   
   createDirectoryIfMissing True ("Output/" ++ year ++ "/" ++ dropExtension fname)
   writeFile ("Output/" ++ year ++ "/" ++ dropExtension fname ++ "/index.html") html
+
+writeTOC :: [FilePath] -> IO ()
+writeTOC mdFiles = do
+  list <- mapM getItem mdFiles
+
+--Order the list and remove first element
+{-
+  template <- readFile "template.html"
+  let tocPan = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ [BulletList list] ++ [Plain [RawInline "html" "</div>"]]) 
+  let html = writeHtmlString (siteOptions template) tocPan 
+  writeFile "Output/index.html" html
+-}
+  return ()
   
-  return [Plain 
+getItem :: FilePath -> IO ([Inline],[Block])
+getItem file = do
+  let fname = takeFileName file
+  
+  contents <- readFile ("Articles/" ++ file)
+  let pandoc = readMarkdown def contents
+  
+  let name = str $ head $ docTitle $ meta pandoc
+  let date = docDate $ meta pandoc  
+  let year = str $ last date
+  
+  return (date,[Plain 
             ([RawInline "html" "<span>"] ++ 
               date ++
                 [RawInline "html" "</span>"] ++ 
                   [Link [Str name] 
-                    ("/" ++ year ++ "/" ++ dropExtension fname,"")])]
+                    ("/" ++ year ++ "/" ++ dropExtension fname,"")])])
+
 
 meta :: Pandoc -> Meta
 meta (Pandoc x _) = x
