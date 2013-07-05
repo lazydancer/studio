@@ -5,6 +5,21 @@ import System.Directory (doesDirectoryExist, getDirectoryContents,createDirector
 import System.FilePath ((</>), takeExtension, replaceExtension, takeFileName, dropExtension)
 import System.IO(writeFile)
 
+data Month =
+    January
+  | February
+  | March
+  | April
+  | May
+  | June
+  | July
+  | August
+  | September
+  | November
+  | December
+  deriving (Eq, Show, Read, Ord)
+
+
 main :: IO () 
 main = do
   --init
@@ -13,18 +28,11 @@ main = do
 
   --Convert the articles
   mdFiles <- getArticles
---let mdFilesOrd = orderingOfmdFiles mdFiles //this is a possiblity
+
   mapM_ writeArticle mdFiles
 
   writeTOC mdFiles
-{-
-  --Create TOC
-  template <- readFile "template.html"
-  let tocPan = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ [BulletList list] ++ [Plain [RawInline "html" "</div>"]]) 
-  let html = writeHtmlString (siteOptions template) tocPan 
-  writeFile "Output/index.html" html
--}
-  
+
   --Move supporting files over
   names <- getDirectoryContents "."
   let cpf = filter (flip elem [".css",".js",".png",".jpg"] . takeExtension) names
@@ -38,15 +46,14 @@ getArticles = do
 --Converts and creates the articles
 writeArticle :: FilePath -> IO ()
 writeArticle file = do 
+
   let fname = takeFileName file
-  
   contents <- readFile ("Articles/" ++ file)
+
   let pandoc = readMarkdown def contents
   
-  let name = str $ head $ docTitle $ meta pandoc
-  let date = docDate $ meta pandoc  
-  let year = str $ last date
- 
+  let year = str $ last $ docDate $ meta pandoc  
+
   template <- readFile "template.html"
   let html = writeHtmlString (siteOptions template) pandoc
   
@@ -65,6 +72,14 @@ writeTOC mdFiles = do
   writeFile "Output/index.html" html
 -}
   return ()
+
+
+
+cnvtLineToString :: [Inline] -> String
+cnvtLineToString xs = foldl fn "" xs
+  where fn ys (Str x) = ys ++ x 
+        fn ys (Space ) = ys ++ " "
+--foldl :: (a -> b -> a) -> a -> [b] -> a
   
 getItem :: FilePath -> IO ([Inline],[Block])
 getItem file = do
@@ -73,7 +88,7 @@ getItem file = do
   contents <- readFile ("Articles/" ++ file)
   let pandoc = readMarkdown def contents
   
-  let name = str $ head $ docTitle $ meta pandoc
+  let name = cnvtLineToString $ docTitle $ meta pandoc
   let date = docDate $ meta pandoc  
   let year = str $ last date
   
