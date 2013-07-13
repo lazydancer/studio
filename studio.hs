@@ -1,9 +1,9 @@
 import Text.Pandoc
 
-import Control.Monad (forM_,join)
-import System.Directory (doesDirectoryExist, getDirectoryContents,createDirectoryIfMissing, setCurrentDirectory, copyFile)
-import System.FilePath ((</>), takeExtension, replaceExtension, takeFileName, dropExtension)
-import System.IO(writeFile)
+import Control.Monad (forM_, join)
+import System.Directory (getDirectoryContents, createDirectoryIfMissing, setCurrentDirectory, copyFile)
+import System.FilePath (takeExtension, takeFileName, dropExtension)
+import System.IO (writeFile)
 
 import Control.Applicative ((<$>))
 import GHC.Exts (sortWith)
@@ -22,14 +22,12 @@ getArticles = filter (`notElem` [".","..",".DS_Store"]) <$> getDirectoryContents
 
 writeArticle :: FilePath -> IO ()
 writeArticle file = do 
-  let fname = takeFileName file
-  contents <- readFile ("Articles/" ++ file)
-  let pandoc = readMarkdown def contents
-  let year = str $ last $ docDate $ meta pandoc  
+  pandoc <- readMarkdown def <$> readFile ("Articles/" ++ file) 
+  let year = inlineStr $ [last $ docDate $ meta pandoc]  
   template <- readFile "template.html"
   let html = writeHtmlString (siteOptions template) pandoc
-  createDirectoryIfMissing True ("Output/" ++ year ++ "/" ++ dropExtension fname)
-  writeFile ("Output/" ++ year ++ "/" ++ dropExtension fname ++ "/index.html") html
+  createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ dropExtension (takeFileName file)
+  writeFile ("Output/" ++ year ++ "/" ++ dropExtension (takeFileName file) ++ "/index.html") html
 
 writeTOC :: [FilePath] -> IO ()
 writeTOC mdFiles = do
@@ -40,21 +38,25 @@ writeTOC mdFiles = do
   let html = writeHtmlString (siteOptions template) tocPan 
   writeFile "Output/index.html" html
 
+moveStatic :: IO ()
+moveStatic = do
+  cpf <-  filter (flip elem [".css",".js",".png",".jpg"] . takeExtension) <$> getDirectoryContents "."
+  forM_ cpf (\x -> copyFile x ("Output/" ++ x))
+
 --Orders the toc list by the date, reverse chronological
 listOrd :: [([Inline],[Block])] -> [(Integer,[Block])]
 listOrd = map ea
   where ea (fs,ls) = (dateOrd $ inlineStrb fs, ls)
 
+--Orders the tuples and returns the a ordered list of TOC elements
 orderList :: [(Integer,[Block])] ->  [[Block]]
 orderList xs = reverse $ snd $ unzip $ sortWith fst xs 
 
 --Convert docDate into a number to be able to order
+--Format: Jan 02 2013
 dateOrd :: [String] -> Integer
-dateOrd xs = read $ join $ year:month:day:[]
-  where month = monthCnvt $ head xs
-        day   = monthCnvt $ head $ tail xs
-        year  = monthCnvt $ last xs
- 
+dateOrd [month,day,year] = read $ join $ map monthCnvt[year,month,day] 
+
 --Convert the month to its repective date number
 monthCnvt :: String -> String 
 monthCnvt x
@@ -70,7 +72,6 @@ monthCnvt x
   | "Oct" == x = "10"
   | "Nov" == x = "11"
   | "Dec" == x = "12"
-  | last x == ',' = init x
   | otherwise  = x
 
 
@@ -79,39 +80,25 @@ inlineStr = foldl fn ""
   where fn ys (Str x) = ys ++ x 
         fn ys (Space ) = ys ++ " "
 
-inlineStrb :: [Inline] -> [String]
-inlineStrb = foldl fn []
-  where fn ys (Str x) = ys ++ [x]
-        fn ys (Space) = ys
+inlineStrb = words . inlineStr 
   
 --The block is returned with an inline date for ordering
 getItem :: FilePath -> IO ([Inline],[Block])
 getItem file = do
-  let fname = takeFileName file
-  contents <- readFile ("Articles/" ++ file)
-  let pandoc = readMarkdown def contents
-  let name = inlineStr $ docTitle $ meta pandoc
+  pandoc <- readMarkdown def <$> readFile ("Articles/" ++ file)
+  let title = docTitle $ meta pandoc
   let date = docDate $ meta pandoc  
-  let year = str $ last date
+  let year = inlineStr $ [last date]
   return (date,[Plain 
             ([RawInline "html" "<span>"] ++ 
               date ++
                 [RawInline "html" "</span>"] ++ 
-                  [Link [Str name] 
-                    ("/" ++ year ++ "/" ++ dropExtension fname,"")])])
+                  [Link title 
+                    ("/" ++ year ++ "/" ++ dropExtension (takeFileName file),"")])])
 
 
 meta :: Pandoc -> Meta
 meta (Pandoc x _) = x
-
-str :: Inline -> String
-str (Str x) = x
-
-moveStatic :: IO ()
-moveStatic = do
-  names <- getDirectoryContents "."
-  let cpf = filter (flip elem [".css",".js",".png",".jpg"] . takeExtension) names
-  forM_ cpf (\x -> copyFile x ("Output/" ++ x))
 
 siteOptions :: String -> WriterOptions
 siteOptions template = def { writerStandalone = True, writerTemplate = template }
