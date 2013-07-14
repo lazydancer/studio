@@ -27,7 +27,7 @@ writeArticle file = do
   template <- readFile "template.html"
   let html = writeHtmlString (siteOptions template) pandoc
   createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ dropExtension (takeFileName file)
-  writeFile ("Output/" ++ year ++ "/" ++ dropExtension (takeFileName file) ++ "/index.html") html
+  writeFile ("Output/" ++ "20" ++ year ++ "/" ++ dropExtension (takeFileName file) ++ "/index.html") html
 
 writeTOC :: [FilePath] -> IO ()
 writeTOC mdFiles = do
@@ -94,7 +94,7 @@ getItem file = do
               date ++
                 [RawInline "html" "</span>"] ++ 
                   [Link title 
-                    ("/" ++ year ++ "/" ++ dropExtension (takeFileName file),"")])])
+                    ("/" ++ "20" ++ year ++ "/" ++ dropExtension (takeFileName file),"")])])
 
 
 meta :: Pandoc -> Meta
