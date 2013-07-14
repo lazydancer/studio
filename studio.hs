@@ -27,7 +27,7 @@ writeArticle file = do
   template <- readFile "template.html"
   let html = writeHtmlString (siteOptions template) pandoc
   createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ dropExtension (takeFileName file)
-  writeFile ("Output/" ++ "20" ++ year ++ "/" ++ dropExtension (takeFileName file) ++ "/index.html") html
+  writeFile ("Output/" ++ year ++ "/" ++ dropExtension (takeFileName file) ++ "/index.html") html
 
 writeTOC :: [FilePath] -> IO ()
 writeTOC mdFiles = do
@@ -40,7 +40,7 @@ writeTOC mdFiles = do
 
 moveStatic :: IO ()
 moveStatic = do
-  cpf <-  filter (flip elem [".css",".js",".png",".jpg"] . takeExtension) <$> getDirectoryContents "."
+  cpf <-  filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) <$> getDirectoryContents "."
   forM_ cpf (\x -> copyFile x ("Output/" ++ x))
 
 --Orders the toc list by the date, reverse chronological
@@ -94,7 +94,7 @@ getItem file = do
               date ++
                 [RawInline "html" "</span>"] ++ 
                   [Link title 
-                    ("/" ++ "20" ++ year ++ "/" ++ dropExtension (takeFileName file),"")])])
+                    ("/" ++ year ++ "/" ++ dropExtension (takeFileName file),"")])])
 
 
 meta :: Pandoc -> Meta
