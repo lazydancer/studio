@@ -10,23 +10,27 @@ import GHC.Exts (sortWith)
 
 main :: IO () 
 main = do
+  --Init
   setCurrentDirectory "/Users/james/Dropbox/Projects/Site/Studio"
   createDirectoryIfMissing False "Output"
   template <- readFile "template.html"
   
+  --Get Articles
   articles <- filter (`notElem` [".","..",".DS_Store"]) <$> getDirectoryContents "Articles"
 
-  unparsedArt <- mapM readFile $ map ("Articles/" ++) articles 
-  let pandocArt = map (readMarkdown def) unparsedArt
-  list <- mapM (getItem template) pandocArt 
-  let tocPan = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ [BulletList (orderList list)] ++ [Plain [RawInline "html" "</div>"]]) 
-  let html = writeHtmlString (siteOptions template) tocPan 
+  --Build Articles and TOC
+  readArticles <- mapM readFile $ map ("Articles/" ++) articles 
+  let pandocArticles = map (readMarkdown def) readArticles
+  unorderedList <- mapM (getItem template) pandocArticles
+  let list = orderList unorderedList
+  let html = writeHtmlString (siteOptions template) (tocWrap list) 
   writeFile "Output/index.html" html
-  
-  cpf <-  filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) <$> getDirectoryContents "."
-  forM_ cpf (\x -> copyFile x ("Output/" ++ x))
 
+  --Move over static files  
+  files <-  filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) <$> getDirectoryContents "."
+  forM_ files (\x -> copyFile x ("Output/" ++ x))
   
+
 --Write the article and return information for TOC
 getItem :: String -> Pandoc -> IO ([Inline],[Block])
 getItem template pandoc = do
@@ -45,7 +49,9 @@ getItem template pandoc = do
                   [Link title 
                     ("/" ++ year ++ "/" ++ urlName title,"")])])
 
---Orders the tuples and returns the a ordered list of TOC elements
+
+--Converting and then sorting with the first element
+--The second element is returned
 orderList :: [([Inline],[Block])] ->  [[Block]]
 orderList = reverse . snd . unzip . sortWith fst . map ea 
   where ea (fs,ls) = (dateOrd $ inlineStrb fs, ls)
@@ -71,6 +77,9 @@ monthCnvt x
   | "Nov" == x = "11"
   | "Dec" == x = "12"
 
+
+--Convert Pandocs Inline to a string with " " for Space, or into words, or
+-- into a urlName format
 inlineStr :: [Inline] -> String
 inlineStr = foldl fn ""
   where fn ys (Str x) = ys ++ x 
@@ -82,12 +91,15 @@ inlineStrb = words . inlineStr
 urlName :: [Inline] -> String
 urlName = map toLower . intercalate "-" . inlineStrb 
 
+
 meta :: Pandoc -> Meta
 meta (Pandoc x _) = x
 
 siteOptions :: String -> WriterOptions
 siteOptions template = def { writerStandalone = True, writerTemplate = template }
 
-{-
-Pandoc (Meta {docTitle = [Str "James",Space,Str "Pucula"], docAuthors = [], docDate = []}) [Para [Link [] ("/","")],BulletList [[Plain [Str "March",Space,Str "29,",Space,Str "2013",Link [Str "Bitcoin"] ("/2012/bitcoin","")]],[Plain [Str "April",Space,Str "10,",Space,Str "2013",Link [Str "A",Space,Str "longer",Space,Str "Title"] ("/2012/hello-world","")]],[Plain [Str "June",Space,Str "1,",Space,Str "2013",Link [Str "Shrt",Space,Str "Title"] ("/2012/hello-world","")]],[Plain [Str "January",Space,Str "2,",Space,Str "2013",Link [Str "Never",Space,Str "Runs",Space,Str "out",Space,Str "of",Space,Str "gas"] ("/2012/hello-world","")]]]]
--}
+--Wraps the list into pandoc format to be converted to HTML
+tocWrap :: [[Block]] -> Pandoc
+tocWrap list = Pandoc Meta{docTitle = [], docAuthors = [], docDate = []} 
+                ([Plain [RawInline "html" "<div class=\"toc\">"]] ++ 
+                  [BulletList list] ++ [Plain [RawInline "html" "</div>"]]) 
