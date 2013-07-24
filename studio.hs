@@ -6,7 +6,11 @@ import System.IO (writeFile)
 import Data.List (intercalate)
 import Data.Char (toLower)
 import Control.Applicative ((<$>))
-import GHC.Exts (sortWith)
+import GHC.Exts (sortWith, groupWith)
+
+data Month 
+  = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+  deriving (Eq, Ord, Enum, Read, Show)
 
 main :: IO () 
 main = do
@@ -51,6 +55,7 @@ getItem template pandoc = do
 
 
 --Converting and then sorting with the first element
+--This is done by converting the date into a number
 --The second element is returned
 orderList :: [([Inline],[Block])] ->  [[Block]]
 orderList = reverse . snd . unzip . sortWith fst . map ea 
@@ -76,6 +81,12 @@ monthCnvt x
   | "Oct" == x = "10"
   | "Nov" == x = "11"
   | "Dec" == x = "12"
+
+-- The above works but it isn't too pretty
+--The data Month was created that would hopefully
+--be used to replace the above
+--sortWith :: Ord b => (a -> b) -> [a] -> [a]
+
 
 
 --Convert Pandocs Inline to a string with " " for Space, or into words, or
