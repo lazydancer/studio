@@ -30,10 +30,10 @@ main = do
   template <- readFile "template.html"
   
   --Get Articles
-  articles <- filter (`notElem` [".","..",".DS_Store"]) <$> getDirectoryContents "Articles"
+  articles <- map ("Articles" ++) . filter (`notElem` [".","..",".DS_Store"]) <$> getDirectoryContents "Articles"
+  readArticles <- mapM readFile $ map (++ "/words.md") articles 
 
   --Build Articles and TOC
-  readArticles <- mapM readFile $ map ("Articles/" ++) articles 
   let pandocArticles = map (readMarkdown def) readArticles
   unorderedList <- mapM (getItem template) pandocArticles
   let list = orderList unorderedList
@@ -43,6 +43,22 @@ main = do
   --Move over static files  
   files <-  filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) <$> getDirectoryContents "."
   forM_ files (\x -> copyFile x ("Output/" ++ x))
+  
+  images <- mapM getImages articles
+  let images' = concat images
+  --Have to find a way to write to the right directory in the output
+  --Maybe having a function that will convert the article that I currently have
+  -- to the other output format
+  --mapM :: Monad m => (a -> m b) -> [a] -> m [b]
+  --getDirectoryContents :: FilePath -> IO [FilePath]
+  
+  return ()
+
+getImages :: String -> IO [String]
+getImages image = do
+  list <- getDirectoryContents image
+  let list' = filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) list
+  return $ map ((image ++ "/") ++) list'
   
 
 --Write the article and return information for TOC
