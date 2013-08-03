@@ -12,6 +12,16 @@ data Month
   = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
   deriving (Eq, Ord, Enum, Read, Show)
 
+--Images
+--Need to have images with the markdown files
+--Articles/bitcoin/words.md
+--Articles/bitcoin/hamburger.jpeg
+
+--Could uplate the "Get Artiles to update the list of articles
+--Reference to the images is internal but will have to be moved over
+--move static files over should be updated to include those
+
+
 main :: IO () 
 main = do
   --Init
