@@ -30,22 +30,26 @@ main = do
   template <- readFile "template.html"
   
   --Get Articles
-  articles <- map ("Articles" ++) . filter (`notElem` [".","..",".DS_Store"]) <$> getDirectoryContents "Articles"
-  readArticles <- mapM readFile $ map (++ "/words.md") articles 
+  articles <- getDirectoryContents "Articles"
+  let articles' = map ("Articles/" ++) $ filter (`notElem` [".","..",".DS_Store"]) articles 
+
+  --Create Page File
+  -- Page :: (FilePath,[FilePath])
+  --  where the string is the article and the filePAths are the static files
+  pages <- mapM getImages articles'
 
   --Build Articles and TOC
+  readArticles <- mapM readFile $ map (++ "/words.md") articles'
   let pandocArticles = map (readMarkdown def) readArticles
-  unorderedList <- mapM (getItem template) pandocArticles
-  let list = orderList unorderedList
-  let html = writeHtmlString (siteOptions template) (tocWrap list) 
+  list <- mapM (getItem template) pandocArticles
+  let list' = orderList list
+  let html = writeHtmlString (siteOptions template) (tocWrap list') 
   writeFile "Output/index.html" html
 
   --Move over static files  
   files <-  filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) <$> getDirectoryContents "."
   forM_ files (\x -> copyFile x ("Output/" ++ x))
   
-  images <- mapM getImages articles
-  let images' = concat images
   --Have to find a way to write to the right directory in the output
   --Maybe having a function that will convert the article that I currently have
   -- to the other output format
@@ -54,11 +58,18 @@ main = do
   
   return ()
 
-getImages :: String -> IO [String]
-getImages image = do
-  list <- getDirectoryContents image
+getArticleYear :: FilePath -> IO Int
+getArticleYear article = do
+  article' <- readFile article 
+  let article'' = readMarkdown def article'
+  return $ read $  inlineStr $ [last (docDate $ meta article'')]
+
+getImages :: String -> IO (FilePath,[FilePath])
+getImages article = do
+  list <- getDirectoryContents article
   let list' = filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) list
-  return $ map ((image ++ "/") ++) list'
+  let article' = article ++ "/words.md"
+  return (article', map ((article ++ "/") ++) list')
   
 
 --Write the article and return information for TOC
@@ -83,7 +94,7 @@ getItem template pandoc = do
 --Converting and then sorting with the first element
 --This is done by converting the date into a number
 --The second element is returned
-orderList :: [([Inline],[Block])] ->  [[Block]]
+orderList :: [([Inline],[Block])] -> [[Block]]
 orderList = reverse . snd . unzip . sortWith fst . map ea 
   where ea (fs,ls) = (dateOrd $ inlineStrb fs, ls)
 
