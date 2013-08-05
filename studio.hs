@@ -73,7 +73,6 @@ getStatic :: FilePath -> IO [FilePath]
 getStatic article = do
   list <- getDirectoryContents article
   let list' = filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) list
-  let article' = article ++ "/words.md"
   return $ map ((article ++ "/") ++) list'
   
 
