@@ -16,15 +16,6 @@ data Page = Page { article :: FilePath
                  , static  :: [FilePath]
                  , date    :: [String] --Month,day,year
                  } deriving (Show) 
---Images
---Need to have images with the markdown files
---Articles/bitcoin/words.md
---Articles/bitcoin/hamburger.jpeg
-
---Could uplate the "Get Artiles to update the list of articles
---Reference to the images is internal but will have to be moved over
---move static files over should be updated to include those
-
 
 main :: IO () 
 main = do
@@ -35,37 +26,51 @@ main = do
   
   --Get Articles
   articles <- getDirectoryContents "Articles"
-  let articles' = map ("Articles/" ++) $ filter (`notElem` [".","..",".DS_Store"]) articles 
+  let articles' = filter (`notElem` [".","..",".DS_Store"]) articles 
   pages <- getPages articles'
   
   --Build Articles and TOC
-  readArticles <- mapM readFile $ map (++ "/words.md") articles'
-  let pandocArticles = map (readMarkdown def) readArticles
-  list <- mapM (getItem template) pandocArticles
+  mapM (writePage template) pages
+
+  writeTOC template pages
+
+  --Move over static files  
+  files <-  filter ((`elem` [".css",".js"]) . takeExtension) <$> getDirectoryContents "."
+  forM_ files (\x -> copyFile x ("Output/" ++ x))
+  
+
+writePage :: String -> Page -> IO ()
+writePage template page= do
+  let year = last $ date page  
+  let title =  article page
+
+  mdArt <- readFile ("Articles/" ++ (article page) ++ "/words.md")
+  let pandocArt = readMarkdown def mdArt
+  let html = writeHtmlString (siteOptions template) pandocArt
+  createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ title 
+  writeFile ("Output/" ++ year ++ "/" ++ title ++ "/index.html") html
+
+writeTOC :: String -> [Page] -> IO ()
+writeTOC template pages = do
+  list <- mapM getItem pages 
   let list' = orderList list
   let html = writeHtmlString (siteOptions template) (tocWrap list') 
   writeFile "Output/index.html" html
 
-  --Move over static files  
-  files <-  filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) <$> getDirectoryContents "."
-  forM_ files (\x -> copyFile x ("Output/" ++ x))
-  
-  return ()
-
 getPages :: [FilePath] -> IO [Page]
-getPages = mapM (\x -> do static <- getImages x
-                       date <- getPageDate (x ++ "/words.md")
-                       return (Page x static date))
+getPages = mapM (\x -> do static <- getStatic ("Articles/" ++ x)
+                          date <- getPageDate ("Articles/" ++ x ++ "/words.md")
+                          return (Page x static date))
     
 
 getPageDate :: FilePath -> IO [String] 
 getPageDate article = do
   article' <- readFile article 
   let article'' = readMarkdown def article'
-  return $ inlineStrb $ docDate $ meta article'' 
+  return $ inlineStr $ docDate $ meta article'' 
 
-getImages :: FilePath -> IO [FilePath]
-getImages article = do
+getStatic :: FilePath -> IO [FilePath]
+getStatic article = do
   list <- getDirectoryContents article
   let list' = filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) list
   let article' = article ++ "/words.md"
@@ -73,22 +78,21 @@ getImages article = do
   
 
 --Write the article and return information for TOC
-getItem :: String -> Pandoc -> IO ([Inline],[Block])
-getItem template pandoc = do
+getItem :: Page -> IO ([Inline],[Block])
+getItem page = do
+  mdArt <- readFile ("Articles/" ++ (article page) ++ "/words.md")
+  let pandoc = readMarkdown def mdArt
+
   let title = docTitle $ meta pandoc
   let date = docDate $ meta pandoc  
-  let year = inlineStr $ [last date]
-
-  let html = writeHtmlString (siteOptions template) pandoc
-  createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ urlName title 
-  writeFile ("Output/" ++ year ++ "/" ++ urlName title ++ "/index.html") html
+  let year = unwords $ inlineStr $ [last date]
 
   return (date,[Plain 
             ([RawInline "html" "<span>"] ++ 
               date ++
                 [RawInline "html" "</span>"] ++ 
                   [Link title 
-                    ("/" ++ year ++ "/" ++ urlName title,"")])])
+                    ("/" ++ year ++ "/" ++ (article page),"")])])
 
 
 --Converting and then sorting with the first element
@@ -96,7 +100,7 @@ getItem template pandoc = do
 --The second element is returned
 orderList :: [([Inline],[Block])] -> [[Block]]
 orderList = reverse . snd . unzip . sortWith fst . map ea 
-  where ea (fs,ls) = (dateOrd $ inlineStrb fs, ls)
+  where ea (fs,ls) = (dateOrd $ inlineStr fs, ls)
 
 --Convert docDate into a number to be able to order
 --Format: Jan 02 2013
@@ -122,18 +126,12 @@ monthCnvt x
 
 --Convert Pandocs Inline to a string with " " for Space, or into words, or
 -- into a urlName format
-inlineStr :: [Inline] -> String
-inlineStr = foldl fn ""
-  where fn ys (Str x) = ys ++ x 
-        fn ys (Space ) = ys ++ " "
 
-inlineStrb :: [Inline] -> [String]
-inlineStrb = words . inlineStr 
+inlineStr :: [Inline] -> [String]
+inlineStr = foldl fn [] 
+  where fn ys (Str x) = ys ++ [x] 
+        fn ys (Space ) = ys
   
-urlName :: [Inline] -> String
-urlName = map toLower . intercalate "-" . inlineStrb 
-
-
 meta :: Pandoc -> Meta
 meta (Pandoc x _) = x
 
