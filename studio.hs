@@ -12,6 +12,10 @@ data Month
   = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
   deriving (Eq, Ord, Enum, Read, Show)
 
+data Page = Page { article :: FilePath
+                 , static  :: [FilePath]
+                 , date    :: [String] --Month,day,year
+                 } deriving (Show) 
 --Images
 --Need to have images with the markdown files
 --Articles/bitcoin/words.md
@@ -32,12 +36,8 @@ main = do
   --Get Articles
   articles <- getDirectoryContents "Articles"
   let articles' = map ("Articles/" ++) $ filter (`notElem` [".","..",".DS_Store"]) articles 
-
-  --Create Page File
-  -- Page :: (FilePath,[FilePath])
-  --  where the string is the article and the filePAths are the static files
-  pages <- mapM getImages articles'
-
+  pages <- getPages articles'
+  
   --Build Articles and TOC
   readArticles <- mapM readFile $ map (++ "/words.md") articles'
   let pandocArticles = map (readMarkdown def) readArticles
@@ -50,26 +50,26 @@ main = do
   files <-  filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) <$> getDirectoryContents "."
   forM_ files (\x -> copyFile x ("Output/" ++ x))
   
-  --Have to find a way to write to the right directory in the output
-  --Maybe having a function that will convert the article that I currently have
-  -- to the other output format
-  --mapM :: Monad m => (a -> m b) -> [a] -> m [b]
-  --getDirectoryContents :: FilePath -> IO [FilePath]
-  
   return ()
 
-getArticleYear :: FilePath -> IO Int
-getArticleYear article = do
+getPages :: [FilePath] -> IO [Page]
+getPages = mapM (\x -> do static <- getImages x
+                       date <- getPageDate (x ++ "/words.md")
+                       return (Page x static date))
+    
+
+getPageDate :: FilePath -> IO [String] 
+getPageDate article = do
   article' <- readFile article 
   let article'' = readMarkdown def article'
-  return $ read $  inlineStr $ [last (docDate $ meta article'')]
+  return $ inlineStrb $ docDate $ meta article'' 
 
-getImages :: String -> IO (FilePath,[FilePath])
+getImages :: FilePath -> IO [FilePath]
 getImages article = do
   list <- getDirectoryContents article
   let list' = filter ((`elem` [".css",".js",".png",".jpg"]) . takeExtension) list
   let article' = article ++ "/words.md"
-  return (article', map ((article ++ "/") ++) list')
+  return $ map ((article ++ "/") ++) list'
   
 
 --Write the article and return information for TOC
@@ -118,12 +118,6 @@ monthCnvt x
   | "Oct" == x = "10"
   | "Nov" == x = "11"
   | "Dec" == x = "12"
-
--- The above works but it isn't too pretty
---The data Month was created that would hopefully
---be used to replace the above
---sortWith :: Ord b => (a -> b) -> [a] -> [a]
-
 
 
 --Convert Pandocs Inline to a string with " " for Space, or into words, or
