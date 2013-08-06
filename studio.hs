@@ -1,5 +1,5 @@
 import Text.Pandoc
-import Control.Monad (forM_, join, mapM)
+import Control.Monad (forM_, join, mapM, mapM_)
 import System.Directory (getDirectoryContents, createDirectoryIfMissing, setCurrentDirectory, copyFile)
 import System.FilePath (takeExtension, takeFileName, dropExtension)
 import System.IO (writeFile)
@@ -27,10 +27,11 @@ main = do
   --Get Articles
   articles <- getDirectoryContents "Articles"
   let articles' = filter (`notElem` [".","..",".DS_Store"]) articles 
+
   pages <- getPages articles'
   
   --Build Articles and TOC
-  mapM (writePage template) pages
+  mapM_ (writePage template) pages
 
   writeTOC template pages
 
@@ -44,7 +45,7 @@ writePage template page= do
   let year = last $ date page  
   let title =  article page
 
-  mdArt <- readFile ("Articles/" ++ (article page) ++ "/words.md")
+  mdArt <- readFile ("Articles/" ++ article page ++ "/words.md")
   let pandocArt = readMarkdown def mdArt
   let html = writeHtmlString (siteOptions template) pandocArt
   createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ title 
@@ -79,19 +80,19 @@ getStatic article = do
 --Write the article and return information for TOC
 getItem :: Page -> IO ([Inline],[Block])
 getItem page = do
-  mdArt <- readFile ("Articles/" ++ (article page) ++ "/words.md")
+  mdArt <- readFile ("Articles/" ++ article page ++ "/words.md")
   let pandoc = readMarkdown def mdArt
 
   let title = docTitle $ meta pandoc
   let date = docDate $ meta pandoc  
-  let year = unwords $ inlineStr $ [last date]
+  let year = unwords $ inlineStr [last date]
 
   return (date,[Plain 
             ([RawInline "html" "<span>"] ++ 
               date ++
                 [RawInline "html" "</span>"] ++ 
                   [Link title 
-                    ("/" ++ year ++ "/" ++ (article page),"")])])
+                    ("/" ++ year ++ "/" ++ article page,"")])])
 
 
 --Converting and then sorting with the first element
