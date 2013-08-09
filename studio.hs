@@ -30,15 +30,22 @@ main = do
 
   pages <- getPages articles'
   
-  --Build Articles and TOC
+  --Build Articles
   mapM_ (writePage template) pages
 
+  --Move over the images
+  mapM_ moveStatic pages
+
+  --Table of contents, main page
   writeTOC template pages
 
   --Move over static files  
   files <-  filter ((`elem` [".css",".js"]) . takeExtension) <$> getDirectoryContents "."
   forM_ files (\x -> copyFile x ("Output/" ++ x))
   
+moveStatic :: Page -> IO ()
+moveStatic page = mapM_ func (static page)
+  where func x = copyFile x ("Output/" ++ (last (date page)) ++ "/" ++ (drop 9 x))
 
 writePage :: String -> Page -> IO ()
 writePage template page= do
