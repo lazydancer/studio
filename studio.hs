@@ -54,28 +54,6 @@ writePage template page = do
   createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ title page 
   writeFile ("Output/" ++ year ++ "/" ++ title page ++ "/index.html") html
 
---order the pages by date
-orderPages :: [Page] -> [Page]
-orderPages = reverse . sortWith (\x -> dateNumber (date x))
-  where 
-    dateNumber [month,day,year] = read $ join [year,monthCnvt month,day] :: Integer
-
---Convert the month to its repective date number in string
-monthCnvt :: String -> String 
-monthCnvt x | length monthNum < 10 = "0" ++ monthNum
-            | otherwise            = monthNum
-  where monthNum = show $ fromEnum (read x :: Month)
-
-writeRecentPage :: String -> Page -> IO ()
-writeRecentPage template page = do
-  let year = last $ date page  
-
-  mdArt <- readFile ("Articles/" ++ title page ++ "/words.md")
-  let pandocArt = readMarkdown def mdArt
-  let html = writeHtmlString (siteOptions template) pandocArt
-  writeFile ("Output/index.html") html
-
-
 getPageDate :: FilePath -> IO [String] 
 getPageDate article = do
   article' <- readFile article 
@@ -104,22 +82,37 @@ getItem :: Page -> IO [Block]
 getItem page = do
   mdArt <- readFile ("Articles/" ++ title page ++ "/words.md")
   let pandoc = readMarkdown def mdArt
-
-  let date = docDate $ meta pandoc  
-  let year = unwords $ inlineStr [last date]
+  let cal = docDate $ meta pandoc  
+  let year = last $ date page
 
   return [Plain 
            ([RawInline "html" "<span>"] ++ 
-             date ++
+             cal ++
                [RawInline "html" "</span>"] ++ 
                  [Link (docTitle $ meta pandoc)
                    ("/" ++ year ++ "/" ++ title page,"")])]
 
+--order the pages by date
+orderPages :: [Page] -> [Page]
+orderPages = reverse . sortWith (\x -> dateNumber (date x))
+  where 
+    dateNumber [month,day,year] = read $ join [year,monthCnvt month,day] :: Integer
 
+--Convert the month to its repective date number in string
+monthCnvt :: String -> String 
+monthCnvt x | length monthNum < 10 = "0" ++ monthNum
+            | otherwise            = monthNum
+  where monthNum = show $ fromEnum (read x :: Month)
 
+writeRecentPage :: String -> Page -> IO ()
+writeRecentPage template page = do
+  let year = last $ date page  
 
---Convert Pandocs Inline to a string with " " for Space, or into words, or
--- into a urlName format
+  mdArt <- readFile ("Articles/" ++ title page ++ "/words.md")
+  let pandocArt = readMarkdown def mdArt
+  let html = writeHtmlString (siteOptions template) pandocArt
+  writeFile ("Output/index.html") html
+
 
 inlineStr :: [Inline] -> [String]
 inlineStr = foldl fn [] 
