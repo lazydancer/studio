@@ -48,11 +48,18 @@ writePage :: String -> Page -> IO ()
 writePage template page = do
   let year = last $ date page  
 
-  mdArt <- readFile ("Articles/" ++ title page ++ "/words.md")
+  let urlTitle = urlConvert (title page)
+  mdArt <- readFile ("Articles/" ++ urlTitle ++ "/words.md")
   let pandocArt = readMarkdown def mdArt
   let html = writeHtmlString (siteOptions template) pandocArt
-  createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ title page 
-  writeFile ("Output/" ++ year ++ "/" ++ title page ++ "/index.html") html
+  createDirectoryIfMissing True $ "Output/" ++ year ++ "/" ++ urlTitle 
+  writeFile ("Output/" ++ year ++ "/" ++ urlTitle ++ "/index.html") html
+
+urlConvert :: String -> String
+urlConvert [] = []
+urlConvert (x:xs) = if x == ' ' then "-" ++ urlConvert xs  
+                                else [x] ++ urlConvert xs 
+
 
 getPageDate :: FilePath -> IO [String] 
 getPageDate article = do
@@ -80,7 +87,8 @@ writeTOC template pages = do
 --Write the article and return information for TOC
 getItem :: Page -> IO [Block]
 getItem page = do
-  mdArt <- readFile ("Articles/" ++ title page ++ "/words.md")
+  let urlTitle = urlConvert (title page)
+  mdArt <- readFile ("Articles/" ++ urlTitle ++ "/words.md")
   let pandoc = readMarkdown def mdArt
   let cal = docDate $ meta pandoc  
   let year = last $ date page
@@ -90,7 +98,7 @@ getItem page = do
              cal ++
                [RawInline "html" "</span>"] ++ 
                  [Link (docTitle $ meta pandoc)
-                   ("/" ++ year ++ "/" ++ title page,"")])]
+                   ("/" ++ year ++ "/" ++ urlTitle,"")])]
 
 --order the pages by date
 orderPages :: [Page] -> [Page]
