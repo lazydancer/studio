@@ -1,0 +1,41 @@
+<html xmlns="http://www.w3.org/1999/xhtml"$if(lang)$ lang="$lang$" xml:lang="$lang$"$endif$>
+<head>
+$for(author-meta)$
+  <meta name="author" content="$author-meta$" />
+$endfor$
+$if(date-meta)$
+  <meta name="date" content="$date-meta$" />
+$endif$
+  <title>$if(title-prefix)$$title-prefix$ - $endif$$pagetitle$</title>
+  
+$for(css)$
+  <link rel="stylesheet" href="$css$" $if(html5)$$else$type="text/css" $endif$/>
+$endfor$
+
+</head>
+<body>
+  $if(title)$
+  <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">$title$</span>
+        <ul class="nav pull-right doc-info">
+          $for(author)$
+          <li><p class="navbar-text">$author$</p></li>
+          $endfor$
+          $if(date)$
+          <li><p class="navbar-text">$date$</p></li>
+          $endif$
+        </ul>
+      </div>
+    </div>
+  </div>
+  $endif$
+  <div class="container">
+    <div class="row">
+      $body$
+      </div>
+    </div>
+  </div>
+</body>
+</html>
